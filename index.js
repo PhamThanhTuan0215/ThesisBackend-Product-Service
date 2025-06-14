@@ -27,6 +27,10 @@ sequelize.authenticate()
             .then(() => {
 
                 console.log('Database synchronized');
+
+                app.listen(PORT || 3001, () => {
+                    console.log("http://localhost:" + (PORT || 3001));
+                });
             })
             .catch(err => {
                 console.log("Error syncing database:", err.message);
@@ -37,5 +41,3 @@ sequelize.authenticate()
         console.log("Can not connect database server: " + err.message)
         process.exit(1);
     });
-
-module.exports = app;
