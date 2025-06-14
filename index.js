@@ -41,3 +41,5 @@ sequelize.authenticate()
         console.log("Can not connect database server: " + err.message)
         process.exit(1);
     });
+
+module.exports = app;
