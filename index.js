@@ -6,18 +6,22 @@ const bodyParser = require('body-parser');
 require('dotenv').config()
 const {PORT} = process.env
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json({ limit: '100mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '100mb' }));
 
 app.get('/', (req, res) => {
     return res.status(200).json({code: 0, message: 'Run product service successfully'})
 })
 
+app.use("/catalog-products", require("./routers/CatalogProduct"))
+app.use("/suggestion-products", require("./routers/SuggestionProduct"))
 app.use("/products", require("./routers/Product"))
 app.use("/product-types", require("./routers/ProductType"))
 app.use("/purchased-products", require("./routers/PurchasedProduct"))
 app.use("/reviews", require("./routers/Review"))
 app.use("/reports", require("./routers/Report"))
+app.use("/catalog-promotions", require("./routers/CatalogPromotion"))
+app.use("/promotions", require("./routers/Promotion"))
 
 sequelize.authenticate()
     .then(() => {

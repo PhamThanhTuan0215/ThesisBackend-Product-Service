@@ -23,9 +23,10 @@ module.exports.reportProducts = async (req, res) => {
         }
 
         const sql = `
-                SELECT pp.*, p.name, p.import_price, p.retail_price, p.url_image
+                SELECT pp.*, p.import_price, p.retail_price, p.actual_price, cp.name, cp.url_image
                 FROM purchased_products pp
                 JOIN products p ON pp.product_id = p.id
+                JOIN catalog_products cp ON p.catalog_product_id = cp.id
                 WHERE pp.status = :status
                 ${seller_id ? 'AND pp.seller_id = :seller_id' : ''}
                 ${startDate && endDate ? 'AND pp."updatedAt" BETWEEN :startDate AND :endDate' : ''}
