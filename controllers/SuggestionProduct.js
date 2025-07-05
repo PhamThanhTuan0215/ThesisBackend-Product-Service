@@ -3,6 +3,8 @@ const ProductType = require('../database/models/ProductType')
 const Category = require('../database/models/Category')
 const SuggestionProduct = require('../database/models/SuggestionProduct')
 
+const axiosNotificationService = require('../services/notificationService')
+
 const sequelize = require('../database/sequelize');
 
 const { uploadFiles, deleteFile } = require('../ultis/manageFilesOnCloudinary')
@@ -212,6 +214,12 @@ module.exports.addSuggestionProduct = async (req, res) => {
             product_details: product_details_json,
             seller_id,
             seller_name
+        });
+
+        axiosNotificationService.post('/notifications', {
+            target_type: 'platform',
+            title: 'Có sản phẩm đề xuất mới',
+            body: `Có sản phẩm đề xuất mới từ nhà bán: ${seller_name}.`
         });
 
         return res.status(201).json({ code: 0, message: 'Thêm sản phẩm đề xuất thành công', data: suggestionProduct });
@@ -433,10 +441,10 @@ module.exports.responseSuggestionProduct = async (req, res) => {
             return res.status(404).json({ code: 1, message: 'Sản phẩm đề xuất không tồn tại' });
         }
 
+        const suggestionProduct = await SuggestionProduct.findByPk(id);
+
         if (approval_status === 'approved') {
             // tạo sản phẩm mới được phép bán từ thông tin sản phẩm đề xuất
-            const suggestionProduct = await SuggestionProduct.findByPk(id);
-
             await CatalogProduct.create({
                 name: suggestionProduct.name,
                 brand: suggestionProduct.brand,
@@ -446,6 +454,21 @@ module.exports.responseSuggestionProduct = async (req, res) => {
                 category_id: suggestionProduct.category_id,
                 product_details: suggestionProduct.product_details
             }, { transaction });
+
+            axiosNotificationService.post('/notifications', {
+                target_type: 'seller',
+                store_id: suggestionProduct.seller_id,
+                title: 'Sản phẩm đã được phê duyệt',
+                body: `Sản phẩm bạn đề xuất đã được phê duyệt.`
+            });
+        }
+        else {
+            axiosNotificationService.post('/notifications', {
+                target_type: 'seller',
+                store_id: suggestionProduct.seller_id,
+                title: 'Sản phẩm đã bị từ chối',
+                body: `Sản phẩm bạn đề xuất đã bị từ chối.`
+            });
         }
 
         await transaction.commit();

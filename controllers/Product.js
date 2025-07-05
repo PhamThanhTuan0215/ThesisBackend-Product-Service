@@ -5,6 +5,8 @@ const Product = require('../database/models/Product')
 const Promotion = require('../database/models/Promotion')
 const CatalogPromotion = require('../database/models/CatalogPromotion')
 
+const axiosNotificationService = require('../services/notificationService')
+
 const { uploadFiles, deleteFile } = require('../ultis/manageFilesOnCloudinary')
 
 const { formatProduct } = require('../ultis/formatData')
@@ -358,6 +360,12 @@ module.exports.addProduct = async (req, res) => {
             return_policy: return_policy_json
         });
 
+        axiosNotificationService.post('/notifications', {
+            target_type: 'platform',
+            title: 'Có sản phẩm mới được đăng ký',
+            body: `Có sản phẩm mới được đăng ký từ nhà bán: ${product.seller_name}.`
+        });
+
         return res.status(201).json({ code: 0, message: 'Thêm sản phẩm thành công', data: product });
     }
     catch (error) {
@@ -527,6 +535,13 @@ module.exports.approvalProduct = async (req, res) => {
         if (affectedRows === 0) {
             return res.status(404).json({ code: 1, message: 'Sản phẩm không tồn tại' });
         }
+
+        axiosNotificationService.post('/notifications', {
+            target_type: 'seller',
+            store_id: updatedRows[0].seller_id,
+            title: 'Sản phẩm đã được phê duyệt',
+            body: `Sản phẩm bạn đăng ký đã được phê duyệt.`
+        });
 
         return res.status(200).json({ code: 0, message: 'Cập nhật trạng thái phê duyệt sản phẩm thành công', data: updatedRows[0] });
     }
