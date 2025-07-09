@@ -199,6 +199,123 @@ module.exports.getAllProducts = async (req, res) => {
     }
 }
 
+module.exports.getAllProductsByCategories = async (req, res) => {
+    try {
+        const { categories_name } = req.body;
+        const { page, limit, is_for_customer } = req.query;
+
+        if (!categories_name || categories_name.length === 0) {
+            return res.status(400).json({ code: 1, message: 'Danh sách hạng mục thuốc cần cung cấp' });
+        }
+
+        const productConditions = {};
+        const catalogProductConditions = {};
+
+        let categoryMap = new Map();
+
+        if (categories_name) {
+            // chuyển đổi category_name thành thành các category_id (bởi vì category_name có thể trùng nhau nếu khác loại sản phẩm)
+
+            const categories = await Category.findAll({
+                where: { category_name: { [Op.in]: categories_name } }, // không phân biệt hoa thường nhưng phải chính xác chuỗi
+                attributes: ['id', 'category_name']
+            });
+
+            // Map category ID to category name (not the other way around)
+            categoryMap = new Map(categories.map(category => [category.id, category.category_name]));
+            const categoryIds = categories.map(category => category.id);
+
+            if (categoryIds.length > 0) {
+                catalogProductConditions.category_id = { [Op.in]: categoryIds };
+            }
+            else {
+                return res.status(200).json({ code: 0, message: 'Lấy danh sách sản phẩm thành công', total: 0, data: [] });
+            }
+        }
+
+        // Xử lý phân trang
+        let offset = 0
+        let limitNumber = null
+        if (limit && !isNaN(limit)) {
+            limitNumber = parseInt(limit);
+
+            if (page && !isNaN(page)) {
+                const pageNumber = parseInt(page);
+                offset = (pageNumber - 1) * limitNumber;
+            }
+        }
+
+        // áp dụng ẩn các cột không cần thiết nếu là hiển thị cho khách hàng
+        let attributes = undefined
+        if (is_for_customer && (is_for_customer === 'true' || is_for_customer === true)) {
+            attributes = { exclude: ['import_price', 'import_date', 'url_import_invoice'] }; // Ẩn các trường này
+
+            productConditions.approval_status = 'approved';
+            productConditions.active_status = 'active';
+            catalogProductConditions.active_status = 'active';
+        }
+
+        // Bước 1: Lấy danh sách id sản phẩm theo điều kiện, phân trang
+        const productIds = await Product.findAll({
+            where: productConditions,
+            include: [
+                {
+                    model: CatalogProduct,
+                    required: true,
+                    where: catalogProductConditions
+                }
+            ],
+            attributes: ['id'],
+            limit: limitNumber,
+            offset,
+            raw: true
+        });
+
+        const ids = productIds.map(p => p.id);
+
+        if (ids.length === 0) {
+            return res.status(200).json({ code: 0, message: 'Lấy danh sách sản phẩm thành công', total: 0, data: [] });
+        }
+
+        // Bước 2: Truy vấn lại Product với include đầy đủ dựa trên danh sách id vừa lấy
+        const products = await Product.findAll({
+            where: { ...productConditions, id: ids },
+            attributes,
+            include: [
+                {
+                    model: CatalogProduct,
+                    required: true,
+                    where: catalogProductConditions
+                }
+            ]
+        });
+
+        // Đếm tổng số sản phẩm (không phân trang)
+        const total = await Product.count({
+            where: productConditions,
+            include: [
+                {
+                    model: CatalogProduct,
+                    required: true,
+                    where: catalogProductConditions
+                }
+            ]
+        });
+
+        const formattedProducts = products.map(product => {
+            const formattedProduct = formatProduct(product);
+            // Add category_name to the formatted product based on category_id
+            formattedProduct.category_name = categoryMap.get(formattedProduct.category_id);
+            return formattedProduct;
+        });
+
+        return res.status(200).json({ code: 0, message: 'Lấy danh sách sản phẩm thành công', total, data: formattedProducts });
+    }
+    catch (error) {
+        return res.status(500).json({ code: 2, message: 'Lấy danh sách sản phẩm thất bại', error: error.message });
+    }
+}
+
 module.exports.getProductById = async (req, res) => {
     try {
 

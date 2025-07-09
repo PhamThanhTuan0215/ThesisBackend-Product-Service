@@ -8,6 +8,9 @@ const authenticateToken = require('../middlewares/auth');
 // lấy danh sách sản phẩm
 Router.get('/list-product', Controller.getAllProducts) // cung cấp thêm các điều kiện lọc
 
+// lấy danh sách sản phẩm dựa trên danh sách các hạng mục thuốc cung cấp
+Router.post('/list-product-by-categories', Controller.getAllProductsByCategories) // cung cấp thêm các điều kiện lọc
+
 // Lấy danh sách thương hiệu sản phẩm
 Router.get('/brands', Controller.getAllBrands);
 
