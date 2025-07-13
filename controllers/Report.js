@@ -46,7 +46,7 @@ module.exports.reportProducts = async (req, res) => {
         // lưu ý: updatedAt phải đặt trong cặp dấu "" nếu không thì nó sẽ tự động bị đổi thành in thường updatedat, gây lỗi cột không tồn tại
         // dùng replacements để chống SQL Injection
         // Sequelize biết đây là câu lệnh SELECT, trả về data dạng mảng các object JSON (chứ không phải metadata hay số lượng rows...).
-        
+
         const productStats = {};
 
         purchasedProducts.forEach(purchasedProduct => {
@@ -70,20 +70,38 @@ module.exports.reportProducts = async (req, res) => {
             const quantitySold = purchasedProduct.quantity;
             const cost = purchasedProduct.import_price * quantitySold;
             const revenue = purchasedProduct.retail_price * quantitySold;
-            const profit = revenue - cost;  
+            const profit = revenue - cost;
 
             // Cập nhật các thông tin thống kê cho sản phẩm
             productStats[productId].quantity_sold += quantitySold;
             productStats[productId].cost += cost;
             productStats[productId].revenue += revenue;
             productStats[productId].profit += profit;
-            productStats[productId].profit_margin = (productStats[productId].revenue > 0) ? 
+            productStats[productId].profit_margin = (productStats[productId].revenue > 0) ?
                 ((productStats[productId].profit / productStats[productId].revenue) * 100).toFixed(2) : 0;
         });
 
-        const reportProducts = Object.values(productStats);
+        // Tổng quan
+        const totalOrders = new Set(purchasedProducts.map(p => p.order_id)).size;
+        const totalCustomers = new Set(purchasedProducts.map(p => p.user_id)).size;
+        const totalProductsSold = purchasedProducts.reduce((sum, p) => sum + (p.quantity || 0), 0);
+        const totalRevenue = purchasedProducts.reduce((sum, p) => sum + (p.retail_price * p.quantity), 0);
+        const totalProfit = purchasedProducts.reduce((sum, p) => sum + ((p.retail_price - p.import_price) * p.quantity), 0);
 
-        return res.status(200).json({ code: 0, message: 'Báo cáo và thống kê sản phẩm đã bán thành công', data: reportProducts });
+        // Top 5 sản phẩm bán chạy nhất
+        const sortedProducts = Object.values(productStats).sort((a, b) => b.quantity_sold - a.quantity_sold);
+        const topProducts = sortedProducts.slice(0, 5);
+
+        const overview = {
+            total_orders: totalOrders,
+            total_customers: totalCustomers,
+            total_products_sold: totalProductsSold,
+            total_revenue: totalRevenue,
+            total_profit: totalProfit,
+            top_5_best_selling_products: topProducts
+        };
+
+        return res.status(200).json({ code: 0, message: 'Báo cáo và thống kê sản phẩm đã bán thành công', overview, data: Object.values(productStats) });
     }
     catch (error) {
         return res.status(500).json({ code: 2, message: 'Báo cáo và thống kê sản phẩm đã bán thất bại', error: error.message });
