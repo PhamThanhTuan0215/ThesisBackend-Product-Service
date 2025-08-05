@@ -247,9 +247,9 @@ module.exports.writeReview = async (req, res) => {
             return res.status(400).json({ code: 1, message: 'Chưa đủ điều kiện để đánh giá sản phẩm' });
         }
 
-        if (purchasedProduct.status !== 'completed') {
-            return res.status(400).json({ code: 1, message: 'Chưa hoàn tất quá trình mua sản phẩm' });
-        }
+        // if (purchasedProduct.status !== 'completed') {
+        //     return res.status(400).json({ code: 1, message: 'Chưa hoàn tất quá trình mua sản phẩm' });
+        // }
 
         const now = new Date();
         const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 ngày trước
