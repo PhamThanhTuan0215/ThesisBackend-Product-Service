@@ -27,7 +27,6 @@ module.exports.reportProducts = async (req, res) => {
                 FROM purchased_products pp
                 JOIN products p ON pp.product_id = p.id
                 JOIN catalog_products cp ON p.catalog_product_id = cp.id
-                WHERE pp.status = :status
                 ${seller_id ? 'AND pp.seller_id = :seller_id' : ''}
                 ${startDate && endDate ? 'AND pp."updatedAt" BETWEEN :startDate AND :endDate' : ''}
             `
@@ -35,7 +34,7 @@ module.exports.reportProducts = async (req, res) => {
         const purchasedProducts = await sequelize.query(sql,
             {
                 replacements: {
-                    status: 'completed',
+                    // status: 'completed',
                     seller_id: seller_id,
                     startDate: startDate ? new Date(selectedStartDate) : undefined,
                     endDate: endDate ? new Date(selectedEndDate) : undefined
